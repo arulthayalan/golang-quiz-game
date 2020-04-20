@@ -9,9 +9,10 @@ import (
 	"path/filepath"
 	"bufio"
 	"strings"
+	"flag"
 )
 
-const filename = "problems.csv"
+const defaultFilename = "problems.csv"
 
 type Question struct {
 	question string
@@ -24,15 +25,17 @@ type Reader struct {
 	r io.Reader
 }
 
-func ResourceFilePath() string {
-	abspath, err := filepath.Abs("../resource/")
+//For given relative path string, 
+//returns absolute path of problems.csv 
+func resourceFilePath(path string) string {
+	abspath, err := filepath.Abs(path)
 	if err != nil {
 		log.Fatal("Error finding file path", err)
 	}
-	return filepath.Join(abspath, filename)
+	return abspath
 }
 
-func fileexist(path string) bool {
+func fileExist(path string) bool {
 	_, err := os.Stat(path)
 	if err != nil && os.IsNotExist(err) {
 		return false
@@ -40,13 +43,14 @@ func fileexist(path string) bool {
 	return true
 }
 
-func openfile(path string) (io.Reader, error) {
+func openFile(path string) (io.Reader, error) {
 	f, err := os.Open(path)
 	//defer f.Close()
 	return f, err
 }
 
-func (c Reader) ReadCsv() ([][]string, error) {
+//return array of records
+func (c Reader) readCsv() ([][]string, error) {
 	var records = [][]string{}
 	reader := csv.NewReader(c.r)
 
@@ -57,19 +61,22 @@ func (c Reader) ReadCsv() ([][]string, error) {
 	return records, nil
 }
 
-func converttoquestion(records [][]string) []Question {
+func questions(records [][]string) []Question {
 	if records == nil || len(records) <=0 {
 		return nil
 	}
 	var questions = []Question{}
 	for _, record := range records {
-		q := Question{record[0],record[1], "", false,}
+		q := Question{
+			question: record[0],
+			answer: record[1], 
+			}
 		questions = append(questions, q)
 	}
 	return questions
 }
 
-func askuser(q []Question) []Question {
+func promptUser(q []Question) []Question {
 	answers := []Question{}
 	for i, question := range q {
 		stdinreader := bufio.NewReader(os.Stdin)
@@ -106,15 +113,22 @@ func calculate(q []Question) (int, int) {
 }
 
 func main() {
+
 	fmt.Println("Welcome to Quiz game")
-	filepath := ResourceFilePath()
-	fileinfo := fileexist(filepath)
+
+	csvFileName := flag.String("csvFileName", defaultFilename, "file name under resources directory" )
+
+	flag.Parse()
+
+	relativepath := resourceFilePath("../resource/")
+	abspath := filepath.Join(relativepath, *csvFileName)
+	fileinfo := fileExist(abspath)
 	if !fileinfo {
 		fmt.Println("File not exist")
 		return
 	}
 
-	file, err := openfile(filepath)
+	file, err := openFile(abspath)
 	if err != nil {
 		log.Printf("unable to open file %v", err)
 	}
@@ -123,14 +137,14 @@ func main() {
 		file,
 	}
 
-	records, err := reader.ReadCsv()
+	records, err := reader.readCsv()
 
 	if err != nil {
 		log.Printf("unable to open file %v", err)
 	}
     //var questions := make([]&Question,2)
-	questions := converttoquestion(records)
-	questions = askuser(questions)
+	questions := questions(records)
+	questions = promptUser(questions)
 	
 	correct, incorrect := calculate(questions)
 	

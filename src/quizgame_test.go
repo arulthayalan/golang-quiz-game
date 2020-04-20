@@ -16,8 +16,8 @@ type CSVCase struct {
 }
 
 func TestResourceFilePath(t *testing.T) {
-	want := "/Users/arulg/workspace/go-repos/go-playground/quiz-game/resource/problems.csv"
-	got := ResourceFilePath()
+	want := "/Users/arulg/workspace/go-repos/go-playground/quiz-game/resource"
+	got := resourceFilePath("../resource/")
 	if got != want {
 		t.Errorf("ResourceFilePath() %q, want %q", got, want)
 	}
@@ -25,12 +25,12 @@ func TestResourceFilePath(t *testing.T) {
 
 func TestFileexist(t *testing.T) {
 	cases := []Case{
-		{"/Users/arulg/workspace/go-repos/go-playground/quiz-game/resource/problems.csv", true},
-		{"/blah/test.csv", false},
+		{"/Users/arulg/workspace/go-repos/go-playground/quiz-game/resource", true},
+		{"/blah", false},
 	}
 
 	for _, c := range cases {
-		got := fileexist(c.in)
+		got := fileExist(c.in)
 		if got != c.want {
 			t.Errorf("fileexist(%q) == %v, want %v", c.in, got, c.want)
 		}
@@ -53,7 +53,7 @@ func TestReadQuestions(t *testing.T) {
 
 	var questionreader Reader = Reader{stringreader}
 
-	records, err := questionreader.ReadCsv()
+	records, err := questionreader.readCsv()
 	if err != nil {
 		t.Errorf(" Error thrown %v", err)
 	}

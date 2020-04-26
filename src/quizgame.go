@@ -1,15 +1,16 @@
 package main
 
 import (
+	"bufio"
 	"encoding/csv"
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
-	"bufio"
 	"strings"
-	"flag"
+	"time"
 )
 
 const defaultFilename = "problems.csv"
@@ -18,15 +19,15 @@ type Question struct {
 	question string
 	answer   string
 	response string
-	correct bool
+	correct  bool
 }
 
 type Reader struct {
 	r io.Reader
 }
 
-//For given relative path string, 
-//returns absolute path of problems.csv 
+//For given relative path string,
+//returns absolute path of problems.csv
 func resourceFilePath(path string) string {
 	abspath, err := filepath.Abs(path)
 	if err != nil {
@@ -62,62 +63,78 @@ func (c Reader) readCsv() ([][]string, error) {
 }
 
 func questions(records [][]string) []Question {
-	if records == nil || len(records) <=0 {
+	if records == nil || len(records) <= 0 {
 		return nil
 	}
 	var questions = []Question{}
 	for _, record := range records {
 		q := Question{
 			question: record[0],
-			answer: record[1], 
-			}
+			answer:   record[1],
+		}
 		questions = append(questions, q)
 	}
 	return questions
 }
 
-func promptUser(q []Question) []Question {
+func promptUser(q []Question, limit int) []Question {
 	answers := []Question{}
+	timer := time.NewTimer(time.Duration(limit) * time.Second)
 	for i, question := range q {
-		stdinreader := bufio.NewReader(os.Stdin)
+
 		fmt.Printf("%v Question %v\n", i+1, question.question)
 		fmt.Print("Enter answer: ")
-		var userresponse = ""
-		for {
-			userresponse, _ = stdinreader.ReadString('\n')
-			userresponse = strings.TrimSuffix(userresponse, "\n")
-			fmt.Println(userresponse)
-			if userresponse != "" {
-				break
-			} else {
-				fmt.Print("Enter answer: ")
+
+		answerCh := make(chan string)
+
+		go func() {
+			stdinreader := bufio.NewReader(os.Stdin)
+			var response string
+			for {
+				response, _ := stdinreader.ReadString('\n')
+				response = strings.TrimSuffix(response, "\n")
+				fmt.Println(response)
+				if response != "" {
+					break
+				} else {
+					fmt.Print("Enter answer: ")
+				}
 			}
+			answerCh <- response
+		}()
+
+		select {
+		case <-timer.C:
+			return answers
+
+		case answer := <-answerCh:
+			question.response = answer
+			if question.response == question.answer {
+				question.correct = true
+			}
+			answers = append(answers, question)
 		}
-		question.response = userresponse
-		if (question.response == question.answer) {
-			question.correct = true
-		}
-		answers = append(answers, question)
+
 	}
 	return answers
 }
 
 func calculate(q []Question) (int, int) {
 	var correct int
-	for _, question := range q { 
+	for _, question := range q {
 		if question.correct {
-			correct++	
+			correct++
 		}
 	}
-	return correct, len(q) - correct 
+	return correct, len(q) - correct
 }
 
 func main() {
 
 	fmt.Println("Welcome to Quiz game")
 
-	csvFileName := flag.String("csvFileName", defaultFilename, "file name under resources directory" )
-
+	csvFileName := flag.String("csvFileName", defaultFilename, "file name under resources directory")
+	timeLimit := flag.Int("timeLimit", 30, "quiz time limit")
 	flag.Parse()
 
 	relativepath := resourceFilePath("../resource/")
@@ -142,14 +159,14 @@ func main() {
 	if err != nil {
 		log.Printf("unable to open file %v", err)
 	}
-    //var questions := make([]&Question,2)
+	//var questions := make([]&Question,2)
 	questions := questions(records)
-	questions = promptUser(questions)
-	
+	questions = promptUser(questions, *timeLimit)
+
 	correct, incorrect := calculate(questions)
-	
+
 	for _, question := range questions {
-		fmt.Printf("Question: %v Answer: %v response: %v \n", 
+		fmt.Printf("Question: %v Answer: %v response: %v \n",
 			question.question, question.answer, question.response)
 	}
 

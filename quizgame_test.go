@@ -3,6 +3,7 @@ package main
 import (
 	"strings"
 	"testing"
+	"path/filepath"
 )
 
 type Case struct {
@@ -16,16 +17,17 @@ type CSVCase struct {
 }
 
 func TestResourceFilePath(t *testing.T) {
-	want := "/Users/arulg/workspace/go-repos/go-playground/quiz-game/resource"
-	got := resourceFilePath("../resource/")
+	want, _ := filepath.Abs("./resource/")
+	got := resourceFilePath("./resource/")
 	if got != want {
 		t.Errorf("ResourceFilePath() %q, want %q", got, want)
 	}
 }
 
 func TestFileexist(t *testing.T) {
+	p, _ := filepath.Abs("./resource/")
 	cases := []Case{
-		{"/Users/arulg/workspace/go-repos/go-playground/quiz-game/resource", true},
+		{p, true},
 		{"/blah", false},
 	}
 

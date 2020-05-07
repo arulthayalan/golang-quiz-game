@@ -89,18 +89,19 @@ func promptUser(q []Question, limit int) []Question {
 
 		go func() {
 			stdinreader := bufio.NewReader(os.Stdin)
-			var response string
+			
 			for {
 				response, _ := stdinreader.ReadString('\n')
 				response = strings.TrimSuffix(response, "\n")
 				fmt.Println(response)
 				if response != "" {
+					answerCh <- response
 					break
 				} else {
 					fmt.Print("Enter answer: ")
 				}
 			}
-			answerCh <- response
+			
 		}()
 
 		select {
@@ -137,7 +138,7 @@ func main() {
 	timeLimit := flag.Int("timeLimit", 30, "quiz time limit")
 	flag.Parse()
 
-	relativepath := resourceFilePath("../resource/")
+	relativepath := resourceFilePath("./resource/")
 	abspath := filepath.Join(relativepath, *csvFileName)
 	fileinfo := fileExist(abspath)
 	if !fileinfo {
